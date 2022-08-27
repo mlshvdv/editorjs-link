@@ -79,6 +79,7 @@ export default class LinkTool {
     this.config = {
       endpoint: config.endpoint || '',
       headers: config.headers || {},
+      fetcher: config.fetcher || undefined,
     };
 
     this.nodes = {
@@ -384,13 +385,21 @@ export default class LinkTool {
     this.data = { link: url };
 
     try {
-      const { body } = await (ajax.get({
-        url: this.config.endpoint,
-        headers: this.config.headers,
-        data: {
-          url,
-        },
-      }));
+      let body;
+
+      if (this.config.fetcher && typeof this.config.fetcher.fetchLinkData === 'function') {
+        body = await (this.config.fetcher.fetchLinkData(url));
+      } else {
+        const response = await (ajax.get({
+          url: this.config.endpoint,
+          headers: this.config.headers,
+          data: {
+            url,
+          },
+        }));
+
+        body = response.body;
+      }
 
       this.onFetch(body);
     } catch (error) {
