@@ -67,10 +67,11 @@ const editor = EditorJS({
 
 Link Tool supports these configuration parameters:
 
-| Field    | Type        | Description                                    |
-| ---------|-------------|------------------------------------------------|
-| endpoint | `string`    | **Required:** the endpoint for link data fetching. |
-| headers | `object`    | **Optional:** the headers used in the GET request. |
+| Field    | Type                            | Description                                              |
+|----------|---------------------------------|----------------------------------------------------------|
+| endpoint | `string`                        | **Required:** the endpoint for link data fetching.       |
+| headers  | `object`                        | **Optional:** the headers used in the GET request.       |
+| fetcher  | `{{fetchLinkData: function}}`   | **Optional:** custom fetching method. See details below. |
 
 ## Output data
 
@@ -137,3 +138,62 @@ Currently, the plugin's design supports the 'title', 'image', and 'description' 
 ```
 
 Also, it can contain any additional fields you want to store.
+
+## Providing custom fetching method
+
+As mentioned at the Config Params section, you have an ability to provide own custom fetching method.
+It is a quite simple: implement `fetchLinkData` method and pass it via `fetcher` config param.
+Method must return a Promise that resolves with response in a format that described at the [backend response format](#server-format) section.
+
+
+| Method        | Arguments | Return value                        | Description                                                    |
+|---------------|-----------|-------------------------------------|----------------------------------------------------------------|
+| fetchLinkData | `string`  | `{Promise.<{success, url: {url}}>}` | Send URL-string to the server, that should return an link data |
+
+Example:
+
+```js
+import LinkTool from '@editorjs/link';
+
+var editor = EditorJS({
+  ...
+
+  tools: {
+    ...
+    linkTool: {
+      class: LinkTool,
+      config: {
+        /**
+         * Custom fetcher
+         */
+        fetcher: {
+          
+          /**
+           * Send URL-string to the server. Backend should fetch link data by this URL and return it
+           * @param {string} url - pasted URL
+           * @return {Promise.<{success, meta: {title, description, image:{url}}}>}
+           */
+          fetchLinkData: (url) => {
+            // your ajax request for link data fetching
+            return MyAjax.getLinkData(url).then((response) => {
+              return {
+                success : 1,
+                meta: {
+                  title : response.data.title, // e.g.: "CodeX Team"
+                  description : response.data.description, // e.g.: "Club of web-development, design and marketing. We build team learning how to build full-valued projects on the world market."
+                  image : {
+                    url : response.data.image_url, // e.g.: "https://codex.so/public/app/img/meta_img.png" 
+                  }
+                  // here any additional data
+                }
+              }
+            })
+          }
+        }
+      }
+    }
+  }
+
+  ...
+});
+```
